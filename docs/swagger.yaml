@@ -1,0 +1,270 @@
+basePath: /
+definitions:
+  model.Auth:
+    properties:
+      name:
+        type: string
+      password:
+        type: string
+    required:
+    - name
+    - password
+    type: object
+  model.UserAdd:
+    properties:
+      count_views:
+        type: integer
+      social_link:
+        minLength: 4
+        type: string
+      social_name:
+        type: string
+      tgId:
+        type: string
+      wallet:
+        type: string
+    required:
+    - count_views
+    - social_link
+    - social_name
+    - tgId
+    - wallet
+    type: object
+  model.UserInfo:
+    properties:
+      balance:
+        type: integer
+      channels:
+        type: integer
+      countViews:
+        type: integer
+      referrals:
+        type: integer
+      tgId:
+        type: string
+      userID:
+        type: string
+      wallet:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is a sample server Echo server.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Echo API
+  version: "1.0"
+paths:
+  /auth:
+    post:
+      consumes:
+      - application/json
+      description: Проверка авторизации пользователя по имени и паролю
+      parameters:
+      - description: Данные авторизации
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/model.Auth'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная авторизация
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Некорректное имя или пароль, или ошибка ввода
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Авторизация пользователя
+      tags:
+      - auth
+  /socials/get:
+    get:
+      description: Возвращает все просмотры соцсетей
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список общих просмотров
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: Неверный email
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить общее количество просмотров по соцсетям
+      tags:
+      - socials
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Извлекает данные пользователя на основе предоставленного идентификатора
+        Telegram.
+      parameters:
+      - description: Telegram user ID
+        in: query
+        name: tgID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User details
+          schema:
+            $ref: '#/definitions/model.UserInfo'
+        "404":
+          description: 'Error message: User not found'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'Error message: Internal server error'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить информацию о пользователе с помощью Telegram ID
+      tags:
+      - users
+  /users/add:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет нового пользователя, если его ID в Telegram (TgId) еще
+        не существует в системе, если существует добавляет новый канал соцсети
+      parameters:
+      - description: Данные для добавления пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/model.UserAdd'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь успешно зарегистрирован
+          schema:
+            $ref: '#/definitions/model.UserAdd'
+        "400":
+          description: Неправильный ввод данных
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Добавление пользователя
+      tags:
+      - users
+  /users/all:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка всех пользователей.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список пользователей
+          schema:
+            items:
+              $ref: '#/definitions/model.UserInfo'
+            type: array
+      summary: Get all users
+      tags:
+      - users
+  /users/balance:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет баланс пользователя на заданное значение.
+      parameters:
+      - description: Telegram ID пользователя
+        in: query
+        name: tgID
+        required: true
+        type: string
+      - description: Значение для обновления баланса
+        in: query
+        name: value
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: succes
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: ошибка обновления баланса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление баланса пользователя
+      tags:
+      - users
+  /users/views:
+    get:
+      consumes:
+      - application/json
+      description: Извлекает количество просмотров для социальной платформы пользователя
+        на основе предоставленного идентификатора Telegram и названия социальной платформы.
+      parameters:
+      - description: Social platform name
+        in: query
+        name: social
+        required: true
+        type: string
+      - description: Telegram user ID
+        in: query
+        name: tgID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Count of views and link
+          schema:
+            additionalProperties:
+              type: integer
+            type: object
+        "400":
+          description: Error message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить просмотры о конкретной социальной платформе
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'Введите JWT токен следующим образом: "Bearer {токен}"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
