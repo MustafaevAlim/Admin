@@ -10,25 +10,32 @@ definitions:
     - name
     - password
     type: object
-  model.UserAdd:
+  model.ChannelsInfo:
     properties:
-      count_views:
+      countViews:
         type: integer
-      social_link:
-        minLength: 4
+      url:
         type: string
-      social_name:
+    type: object
+  model.ParsInfo:
+    properties:
+      type_channel:
         type: string
-      tgId:
-        type: string
-      wallet:
+      url:
         type: string
     required:
-    - count_views
-    - social_link
-    - social_name
-    - tgId
-    - wallet
+    - type_channel
+    - url
+    type: object
+  model.UserConfirm:
+    properties:
+      url_channel:
+        type: string
+      username:
+        type: string
+    required:
+    - url_channel
+    - username
     type: object
   model.UserInfo:
     properties:
@@ -40,9 +47,18 @@ definitions:
         type: integer
       referrals:
         type: integer
-      tgId:
+      username:
         type: string
-      userID:
+      wallet:
+        type: string
+    type: object
+  model.WithdrawInfo:
+    properties:
+      amount:
+        type: integer
+      confirmed:
+        type: boolean
+      username:
         type: string
       wallet:
         type: string
@@ -91,88 +107,91 @@ paths:
       summary: Авторизация пользователя
       tags:
       - auth
-  /socials/get:
+  /channels/all:
     get:
-      description: Возвращает все просмотры соцсетей
+      consumes:
+      - application/json
+      description: Retrieves the total views for different types of channels (YouTube,
+        TikTok, Instagram, Facebook)
       produces:
       - application/json
       responses:
         "200":
-          description: Список общих просмотров
+          description: Map of channel types and their total views
           schema:
             additionalProperties:
               type: integer
             type: object
-        "400":
-          description: Неверный email
+        "500":
+          description: Internal server error
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Получить общее количество просмотров по соцсетям
+      summary: Get total views by channel type
       tags:
-      - socials
+      - channels
+  /parsing/add:
+    post:
+      consumes:
+      - application/json
+      description: Adds parsing information to the repository
+      parameters:
+      - description: Parsing Information
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/model.ParsInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid input or incorrect name/password
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Add parsing information
+      tags:
+      - parsing
   /users:
     get:
       consumes:
       - application/json
-      description: Извлекает данные пользователя на основе предоставленного идентификатора
-        Telegram.
+      description: Retrieves information about a user based on the provided username
       parameters:
-      - description: Telegram user ID
+      - description: Username of the user
         in: query
-        name: tgID
+        name: username
         required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: User details
+          description: User information
           schema:
             $ref: '#/definitions/model.UserInfo'
-        "404":
-          description: 'Error message: User not found'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: 'Error message: Internal server error'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получить информацию о пользователе с помощью Telegram ID
-      tags:
-      - users
-  /users/add:
-    post:
-      consumes:
-      - application/json
-      description: Добавляет нового пользователя, если его ID в Telegram (TgId) еще
-        не существует в системе, если существует добавляет новый канал соцсети
-      parameters:
-      - description: Данные для добавления пользователя
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/model.UserAdd'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Пользователь успешно зарегистрирован
-          schema:
-            $ref: '#/definitions/model.UserAdd'
         "400":
-          description: Неправильный ввод данных
+          description: Invalid username
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Добавление пользователя
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user information
       tags:
       - users
   /users/all:
@@ -192,75 +211,167 @@ paths:
       summary: Get all users
       tags:
       - users
-  /users/balance:
-    put:
+  /users/confirm:
+    post:
       consumes:
       - application/json
-      description: Обновляет баланс пользователя на заданное значение.
+      description: Confirms the user's channel by username and channel URL
       parameters:
-      - description: Telegram ID пользователя
-        in: query
-        name: tgID
+      - description: User confirmation data
+        in: body
+        name: body
         required: true
-        type: string
-      - description: Значение для обновления баланса
-        in: query
-        name: value
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/model.UserConfirm'
       produces:
       - application/json
       responses:
         "200":
-          description: succes
+          description: confirmed
           schema:
             additionalProperties:
               type: string
             type: object
-        "500":
-          description: ошибка обновления баланса
+        "400":
+          description: Invalid input or incorrect url/username
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Обновление баланса пользователя
+      summary: Confirm a user channel
       tags:
       - users
   /users/views:
     get:
       consumes:
       - application/json
-      description: Извлекает количество просмотров для социальной платформы пользователя
-        на основе предоставленного идентификатора Telegram и названия социальной платформы.
+      description: Retrieves the list of channels and their views for a specific user
+        based on the provided username
       parameters:
-      - description: Social platform name
+      - description: Username of the user
         in: query
-        name: social
-        required: true
-        type: string
-      - description: Telegram user ID
-        in: query
-        name: tgID
+        name: username
         required: true
         type: string
       produces:
       - application/json
       responses:
         "200":
-          description: Count of views and link
+          description: List of channels with their views
           schema:
-            additionalProperties:
-              type: integer
-            type: object
+            items:
+              $ref: '#/definitions/model.ChannelsInfo'
+            type: array
         "400":
-          description: Error message
+          description: Invalid username
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Получить просмотры о конкретной социальной платформе
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get views for user channels
       tags:
       - users
+  /withdraw/all:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of all withdraw notes from the repository
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of all withdraw notes
+          schema:
+            items:
+              $ref: '#/definitions/model.WithdrawInfo'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all withdraw notes
+      tags:
+      - withdraw
+  /withdraw/cancel:
+    post:
+      consumes:
+      - application/json
+      description: Confirms a withdrawal for a specific user based on the provided
+        username
+      parameters:
+      - description: Username of the user whose withdrawal is being confirmed
+        in: query
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Confirmation message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid username
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Confirm a withdrawal
+      tags:
+      - withdraw
+  /withdraw/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Confirms a withdrawal for a specific user based on the provided
+        username
+      parameters:
+      - description: Username of the user whose withdrawal is being confirmed
+        in: query
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Confirmation message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid username
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Confirm a withdrawal
+      tags:
+      - withdraw
 securityDefinitions:
   BearerAuth:
     description: 'Введите JWT токен следующим образом: "Bearer {токен}"'

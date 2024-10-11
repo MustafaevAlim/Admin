@@ -1,61 +1,76 @@
 package user
 
 import (
-	"log"
+	"fmt"
 	"myapp/internal/model"
-	"myapp/internal/repository/socials"
+	"myapp/internal/repository/channels"
+	"myapp/internal/repository/views"
+	"time"
 
-	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
 )
 
-func InRepo(user model.UserAdd, db *gorm.DB) {
-	uuid, err := uuid.NewV4()
+func Confirm(userId uint, urlChannel string, db *gorm.DB) error {
+	location, err := time.LoadLocation("Europe/Moscow")
 	if err != nil {
-		log.Fatalf("failed to generate UUID: %v", err)
+		fmt.Println("Ошибка загрузки временной зоны:", err)
+		return err
 	}
 
-	u := UserRepo{ID: uuid, TgId: user.TgId, Wallet: user.Wallet, CountViews: 0,
-		Balance: 0, Referrals: 0, Channels: 0}
-	res := db.Create(&u)
-	if res.Error != nil {
-		panic(res.Error.Error())
+	currentTime := time.Now().In(location)
+	result := db.Model(&channels.ChannelsRepo{}).
+		Where("user_id = ? AND url = ?", userId, urlChannel).
+		Updates(map[string]interface{}{
+			"confirmed":         true,
+			"confirmation_date": currentTime,
+		})
+
+	if result.Error != nil {
+		return result.Error
 	}
 
+	return nil
 }
 
-func UpdateBalance(tgId string, value float32, db *gorm.DB) error {
-	result := db.Model(&UserRepo{}).Where("tg_id = ?", tgId).Update("balance", gorm.Expr("balance + ?", value))
+func UpdateBalance(id uint, value int64, db *gorm.DB) error {
+	result := db.Model(&UserRepo{}).Where("id = ?", id).Update("views_balance", gorm.Expr("views_balance + ?", value))
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
 }
 
-func GetAllViews(id uuid.UUID, db *gorm.DB) int {
-	var totalAmount int
-	db.Model(&socials.SocialsRepo{}).
-		Where("user_id = ?", id).
-		Select("SUM(count_views) as total").
-		Scan(&totalAmount)
-	db.Model(&UserRepo{}).Where("id = ?", id).Update("count_views", totalAmount)
+func GetAllViews(ids []uint, db *gorm.DB) int64 {
+	var totalAmount int64
+	for _, i := range ids {
+		totalAmount += views.GetCountViews(i, db)
+	}
 	return totalAmount
 
 }
 
-func Get(tgId string, db *gorm.DB) model.UserInfo {
+func Get(username string, db *gorm.DB) model.UserInfo {
 	var user UserRepo
-	result := db.Where("tg_id = ?", tgId).First(&user)
+	result := db.Where("username = ?", username).First(&user)
 	if result.Error != nil {
 		panic(result.Error.Error())
 	}
+	id, err := GetIdFromUsername(user.Username, db)
+	if err != nil {
+		panic(err)
+	}
+	telegId, err := GetTelegramIdFromUsername(user.Username, db)
+	if err != nil {
+		panic(err)
+	}
+	channelsId := channels.GetAllUserChannelsId(id, db)
 	return model.UserInfo{
-		TgId:       user.TgId,
-		Wallet:     user.Wallet,
-		Channels:   user.Channels,
-		CountViews: user.CountViews,
-		Referrals:  user.Referrals,
-		Balance:    int(user.Balance),
+		Username:   user.Username,
+		Channels:   int(channels.CountChannels(id, db)),
+		Wallet:     user.CryptoAddress,
+		Referrals:  int(CountReferrals(telegId, db)),
+		CountViews: int64(GetAllViews(channelsId, db)),
+		Balance:    user.ViewsBalance,
 	}
 
 }
@@ -66,51 +81,70 @@ func GetAll(db *gorm.DB) []model.UserInfo {
 	if result.Error != nil {
 		panic(result.Error.Error())
 	}
-	return Map(AllNote, db, ToUserInfoFromRepo)
+	return Map(AllNote, db)
 
 }
 
-func IncChannels(tgId string, db *gorm.DB) error {
-	result := db.Model(&UserRepo{}).Where("tg_id = ?", tgId).Update("channels", gorm.Expr("channels + ?", 1))
+func CountReferrals(telegramId int64, db *gorm.DB) int64 {
+	var count int64
+	result := db.Model(&UserRepo{}).Where("referral_first_level_id = ?", telegramId).Count(&count)
+
 	if result.Error != nil {
-		return result.Error
+		fmt.Println("Ошибка:", result.Error)
 	}
-	return nil
+	return count
 }
 
-func GetFromTgId(tgId string, db *gorm.DB) (*model.UserInfo, error) {
+func GetFromId(id uint, db *gorm.DB) (*UserRepo, error) {
 	var u UserRepo
-	result := db.Where("tg_id = ?", tgId).First(&u)
+	result := db.Where("id = ?", id).First(&u)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	mUser := model.UserInfo{
-		UserID:     u.ID,
-		TgId:       u.TgId,
-		Wallet:     u.Wallet,
-		Channels:   u.Channels,
-		CountViews: u.CountViews,
-		Balance:    int(u.Balance),
-		Referrals:  u.Referrals,
-	}
-	return &mUser, nil
+	return &u, nil
 }
 
-func GetIdFromTgId(tgId string, db *gorm.DB) (uuid.UUID, error) {
+func GetTelegramIdFromUsername(username string, db *gorm.DB) (int64, error) {
 	var u UserRepo
-	result := db.Where("tg_id = ?", tgId).First(&u)
+	result := db.Where("username = ?", username).First(&u)
 	if result.Error != nil {
-		return uuid.Nil, result.Error
+		return 0, result.Error
+	}
+
+	return u.TelegramId, nil
+}
+
+func GetIdFromUsername(username string, db *gorm.DB) (uint, error) {
+	var u UserRepo
+	result := db.Where("username = ?", username).First(&u)
+	if result.Error != nil {
+		return 0, result.Error
 	}
 
 	return u.ID, nil
 }
 
-func Map(vs []UserRepo, db *gorm.DB, f func(repo UserRepo) model.UserInfo) []model.UserInfo {
+func Map(vs []UserRepo, db *gorm.DB) []model.UserInfo {
 	vsm := make([]model.UserInfo, len(vs))
 	for i, v := range vs {
-		v.CountViews = GetAllViews(v.ID, db)
-		vsm[i] = f(v)
+		id, err := GetIdFromUsername(v.Username, db)
+		if err != nil {
+			panic(err)
+		}
+		telegId, err := GetTelegramIdFromUsername(v.Username, db)
+		if err != nil {
+			panic(err)
+		}
+		channelsId := channels.GetAllUserChannelsId(id, db)
+		user := model.UserInfo{
+			Username:   v.Username,
+			Channels:   int(channels.CountChannels(id, db)),
+			Wallet:     v.CryptoAddress,
+			Referrals:  int(CountReferrals(telegId, db)),
+			CountViews: int64(GetAllViews(channelsId, db)),
+			Balance:    v.ViewsBalance,
+		}
+		vsm[i] = user
 	}
 	return vsm
 }

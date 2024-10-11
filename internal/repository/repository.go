@@ -5,8 +5,11 @@ import (
 	"log"
 	"myapp/internal/config"
 	"myapp/internal/repository/admin"
-	"myapp/internal/repository/socials"
+	"myapp/internal/repository/channels"
+	"myapp/internal/repository/parsing"
 	"myapp/internal/repository/user"
+	"myapp/internal/repository/views"
+	"myapp/internal/repository/withdraw"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -29,7 +32,19 @@ func InitDB(config config.Config) *gorm.DB {
 		panic(err)
 	}
 
-	err = db.AutoMigrate(&socials.SocialsRepo{})
+	err = db.AutoMigrate(&channels.ChannelsRepo{})
+	if err != nil {
+		panic(err)
+	}
+	err = db.AutoMigrate(&withdraw.WithdrawRepo{})
+	if err != nil {
+		panic(err)
+	}
+	err = db.AutoMigrate(&views.ViewsRepo{})
+	if err != nil {
+		panic(err)
+	}
+	err = db.AutoMigrate(&parsing.ParsRepo{})
 	if err != nil {
 		panic(err)
 	}

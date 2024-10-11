@@ -1,9 +1,7 @@
 package admin
 
-import "gorm.io/gorm"
-
 type AdminRepo struct {
-	gorm.Model
-	Password string `gorm:"varchar(200)"`
-	Name     string `gorm:"varchar(200)"`
+	ID       uint   `gorm:"primaryKey"`
+	Password string `gorm:"type:varchar(100)"`
+	Login    string `gorm:"type:varchar(100)"`
 }

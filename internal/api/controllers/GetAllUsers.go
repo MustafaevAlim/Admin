@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"myapp/internal/repository/user"
 	"net/http"
 
@@ -18,7 +17,6 @@ import (
 // @Router       /users/all [get]
 func (h *Handler) GetAllUsers(c echo.Context) error {
 	allnote := user.GetAll(h.repository)
-	fmt.Println(allnote)
 	return c.JSON(http.StatusOK, allnote)
 
 }

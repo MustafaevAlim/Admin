@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"myapp/internal/repository/user"
 	"net/http"
 
@@ -9,20 +8,19 @@ import (
 )
 
 // GetUser godoc
-// @Summary      Получить информацию о пользователе с помощью Telegram ID
-// @Description  Извлекает данные пользователя на основе предоставленного идентификатора Telegram.
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        tgID    query  string  true  "Telegram user ID"
-// @Success      200   {object} model.UserInfo  "User details"
-// @Failure      404   {object} map[string]string "Error message: User not found"
-// @Failure      500   {object} map[string]string "Error message: Internal server error"
-// @Router       /users [get]
+// @Summary Get user information
+// @Description Retrieves information about a user based on the provided username
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param  username  query  string  true  "Username of the user"
+// @Success 200 {object} model.UserInfo "User information"
+// @Failure 400 {object} map[string]string "Invalid username"
+// @Failure 404 {object} map[string]string "User not found"
+// @Router /users [get]
 func (h *Handler) GetUser(c echo.Context) error {
-	id := c.QueryParam("tgID")
-	fmt.Println("Received tgID:", id) // Логируем полученный tgID
-	u := user.Get(id, h.repository)
+	username := c.QueryParam("username")
+	u := user.Get(username, h.repository)
 
 	return c.JSON(http.StatusOK, u)
 

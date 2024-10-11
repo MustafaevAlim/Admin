@@ -64,19 +64,22 @@
                 }
             }
         },
-        "/socials/get": {
+        "/channels/all": {
             "get": {
-                "description": "Возвращает все просмотры соцсетей",
+                "description": "Retrieves the total views for different types of channels (YouTube, TikTok, Instagram, Facebook)",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "socials"
+                    "channels"
                 ],
-                "summary": "Получить общее количество просмотров по соцсетям",
+                "summary": "Get total views by channel type",
                 "responses": {
                     "200": {
-                        "description": "Список общих просмотров",
+                        "description": "Map of channel types and their total views",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -84,8 +87,54 @@
                             }
                         }
                     },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/parsing/add": {
+            "post": {
+                "description": "Adds parsing information to the repository",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "parsing"
+                ],
+                "summary": "Add parsing information",
+                "parameters": [
+                    {
+                        "description": "Parsing Information",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ParsInfo"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success message",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "400": {
-                        "description": "Неверный email",
+                        "description": "Invalid input or incorrect name/password",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -98,7 +147,7 @@
         },
         "/users": {
             "get": {
-                "description": "Извлекает данные пользователя на основе предоставленного идентификатора Telegram.",
+                "description": "Retrieves information about a user based on the provided username",
                 "consumes": [
                     "application/json"
                 ],
@@ -108,77 +157,34 @@
                 "tags": [
                     "users"
                 ],
-                "summary": "Получить информацию о пользователе с помощью Telegram ID",
+                "summary": "Get user information",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Telegram user ID",
-                        "name": "tgID",
+                        "description": "Username of the user",
+                        "name": "username",
                         "in": "query",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "User details",
+                        "description": "User information",
                         "schema": {
                             "$ref": "#/definitions/model.UserInfo"
                         }
                     },
-                    "404": {
-                        "description": "Error message: User not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Error message: Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/users/add": {
-            "post": {
-                "description": "Добавляет нового пользователя, если его ID в Telegram (TgId) еще не существует в системе, если существует добавляет новый канал соцсети",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Добавление пользователя",
-                "parameters": [
-                    {
-                        "description": "Данные для добавления пользователя",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.UserAdd"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Пользователь успешно зарегистрирован",
-                        "schema": {
-                            "$ref": "#/definitions/model.UserAdd"
-                        }
-                    },
                     "400": {
-                        "description": "Неправильный ввод данных",
+                        "description": "Invalid username",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -215,9 +221,9 @@
                 }
             }
         },
-        "/users/balance": {
-            "put": {
-                "description": "Обновляет баланс пользователя на заданное значение.",
+        "/users/confirm": {
+            "post": {
+                "description": "Confirms the user's channel by username and channel URL",
                 "consumes": [
                     "application/json"
                 ],
@@ -227,26 +233,21 @@
                 "tags": [
                     "users"
                 ],
-                "summary": "Обновление баланса пользователя",
+                "summary": "Confirm a user channel",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Telegram ID пользователя",
-                        "name": "tgID",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Значение для обновления баланса",
-                        "name": "value",
-                        "in": "query",
-                        "required": true
+                        "description": "User confirmation data",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UserConfirm"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "succes",
+                        "description": "confirmed",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -254,8 +255,8 @@
                             }
                         }
                     },
-                    "500": {
-                        "description": "ошибка обновления баланса",
+                    "400": {
+                        "description": "Invalid input or incorrect url/username",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -268,7 +269,7 @@
         },
         "/users/views": {
             "get": {
-                "description": "Извлекает количество просмотров для социальной платформы пользователя на основе предоставленного идентификатора Telegram и названия социальной платформы.",
+                "description": "Retrieves the list of channels and their views for a specific user based on the provided username",
                 "consumes": [
                     "application/json"
                 ],
@@ -278,35 +279,178 @@
                 "tags": [
                     "users"
                 ],
-                "summary": "Получить просмотры о конкретной социальной платформе",
+                "summary": "Get views for user channels",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Social platform name",
-                        "name": "social",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Telegram user ID",
-                        "name": "tgID",
+                        "description": "Username of the user",
+                        "name": "username",
                         "in": "query",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Count of views and link",
+                        "description": "List of channels with their views",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "integer"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ChannelsInfo"
                             }
                         }
                     },
                     "400": {
-                        "description": "Error message",
+                        "description": "Invalid username",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/withdraw/all": {
+            "get": {
+                "description": "Retrieves a list of all withdraw notes from the repository",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "withdraw"
+                ],
+                "summary": "Get all withdraw notes",
+                "responses": {
+                    "200": {
+                        "description": "List of all withdraw notes",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.WithdrawInfo"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/withdraw/cancel": {
+            "post": {
+                "description": "Confirms a withdrawal for a specific user based on the provided username",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "withdraw"
+                ],
+                "summary": "Confirm a withdrawal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username of the user whose withdrawal is being confirmed",
+                        "name": "username",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Confirmation message",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid username",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/withdraw/confirm": {
+            "post": {
+                "description": "Confirms a withdrawal for a specific user based on the provided username",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "withdraw"
+                ],
+                "summary": "Confirm a withdrawal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username of the user whose withdrawal is being confirmed",
+                        "name": "username",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Confirmation message",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid username",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -334,30 +478,43 @@
                 }
             }
         },
-        "model.UserAdd": {
+        "model.ChannelsInfo": {
             "type": "object",
-            "required": [
-                "count_views",
-                "social_link",
-                "social_name",
-                "tgId",
-                "wallet"
-            ],
             "properties": {
-                "count_views": {
+                "countViews": {
                     "type": "integer"
                 },
-                "social_link": {
-                    "type": "string",
-                    "minLength": 4
-                },
-                "social_name": {
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ParsInfo": {
+            "type": "object",
+            "required": [
+                "type_channel",
+                "url"
+            ],
+            "properties": {
+                "type_channel": {
                     "type": "string"
                 },
-                "tgId": {
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UserConfirm": {
+            "type": "object",
+            "required": [
+                "url_channel",
+                "username"
+            ],
+            "properties": {
+                "url_channel": {
                     "type": "string"
                 },
-                "wallet": {
+                "username": {
                     "type": "string"
                 }
             }
@@ -377,10 +534,24 @@
                 "referrals": {
                     "type": "integer"
                 },
-                "tgId": {
+                "username": {
                     "type": "string"
                 },
-                "userID": {
+                "wallet": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.WithdrawInfo": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "confirmed": {
+                    "type": "boolean"
+                },
+                "username": {
                     "type": "string"
                 },
                 "wallet": {

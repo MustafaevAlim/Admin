@@ -12,7 +12,7 @@ func Auth(name string, password string, db *gorm.DB) error {
 	if res.Error != nil {
 		panic(res.Error)
 	}
-	if fromDB.Name != name {
+	if fromDB.Login != name {
 		return errors.New("неверное имя")
 	}
 	if fromDB.Password != password {

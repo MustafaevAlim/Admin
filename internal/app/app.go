@@ -19,7 +19,7 @@ type App struct {
 func NewApp() (*App, error) {
 	app := &App{}
 	app.ServerEcho = echo.New()
-	conf, err := config.LoadConfig("../../internal/config")
+	conf, err := config.LoadConfig("internal/config")
 	if err != nil {
 		log.Fatalf("Ошибка загрузки конфигурации: %v", err)
 	}
